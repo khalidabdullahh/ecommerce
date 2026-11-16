@@ -22,7 +22,7 @@ export const HeroBanner: React.FC = () => {
           </h1>
 
           <p className="text-xs sm:text-sm text-gray-300 mb-4 line-clamp-2">
-            Zarposh ও Black Race এর কোয়ালিটি প্রোডাক্ট এখন সরাসরি আপনার দোরগোড়ায়। পণ্য হাতে পেয়ে মূল্য পরিশোধের সুবিধা।
+            k commerce - প্রিমিয়াম কোয়ালিটি প্রোডাক্ট এখন সরাসরি আপনার দোরগোড়ায়। পণ্য হাতে পেয়ে মূল্য পরিশোধের সুবিধা।
           </p>
 
           <div className="flex flex-wrap items-center gap-3">

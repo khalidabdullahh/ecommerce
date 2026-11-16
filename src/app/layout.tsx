@@ -15,13 +15,18 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "EasyBuy BD | প্রিমিয়াম অনলাইন শপিং ও ফ্যাশন",
-  description: "সারা বাংলাদেশে ক্যাশ অন ডেলিভারি সুবিধা সহ সেরা মূল্যে কোয়ালিটি জ্যাকেট, শার্ট, ব্লেজার ও গ্যাজেট কিনুন।",
-  manifest: "/manifest.json"
+  title: "k commerce | প্রিমিয়াম অনলাইন শপিং ও ফ্যাশন",
+  description: "k commerce - সারা বাংলাদেশে ক্যাশ অন ডেলিভারি সুবিধা সহ সেরা মূল্যে কোয়ালিটি জ্যাকেট, শার্ট, ব্লেজার ও গ্যাজেট কিনুন। হেল্পলাইন: 01643526721",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png"
+  }
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ea580c",
+  themeColor: "#7e22ce",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1

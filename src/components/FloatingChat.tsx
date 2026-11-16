@@ -30,7 +30,7 @@ export const FloatingChat: React.FC = () => {
 
           <div className="space-y-2">
             <a
-              href="https://wa.me/8801700000000"
+              href="https://wa.me/8801643526721"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold p-2.5 rounded-xl transition-all shadow-xs"
@@ -50,11 +50,11 @@ export const FloatingChat: React.FC = () => {
             </a>
 
             <a
-              href="tel:01700000000"
+              href="tel:01643526721"
               className="flex items-center gap-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold p-2.5 rounded-xl transition-all"
             >
-              <Phone className="w-4 h-4 text-orange-600" />
-              <span>সরাসরি কল করুন (01700-000000)</span>
+              <Phone className="w-4 h-4 text-purple-600" />
+              <span>সরাসরি কল করুন (01643-526721)</span>
             </a>
           </div>
         </div>

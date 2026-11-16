@@ -95,7 +95,7 @@ export const BKashPaymentModal: React.FC = () => {
             </div>
             <div>
               <h3 className="text-xs font-bold">Payment Gateway</h3>
-              <p className="text-[10px] text-pink-100">Merchant: EasyBuy BD</p>
+              <p className="text-[10px] text-pink-100">Merchant: k commerce</p>
             </div>
           </div>
           <button

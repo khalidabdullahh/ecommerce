@@ -1,16 +1,16 @@
 {
-  "name": "EasyBuy BD",
-  "short_name": "EasyBuy",
-  "description": "EasyBuy BD - অনলাইন শপিং ও ফ্যাশন",
+  "name": "k commerce",
+  "short_name": "k commerce",
+  "description": "k commerce - অনলাইন শপিং ও ফ্যাশন (হেল্পলাইন: 01643526721)",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#ea580c",
+  "theme_color": "#7e22ce",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
     }
   ]
 }
