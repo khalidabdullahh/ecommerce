@@ -13,7 +13,9 @@ import {
   Trash2,
   CheckCircle,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  UploadCloud,
+  X
 } from "lucide-react";
 import { OrderStatus } from "@/types";
 
@@ -39,6 +41,21 @@ export default function AdminPage() {
   const [newImage, setNewImage] = useState("");
   const [newSizes, setNewSizes] = useState("M, L, XL");
   const [newDescription, setNewDescription] = useState("");
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("ছবির সাইজ সর্বোচ্চ 5MB হতে পারে");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // KPI Calculations
   const totalSales = orders.reduce((sum, ord) => sum + ord.grandTotal, 0);
@@ -497,15 +514,64 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">ছবির লিঙ্ক (Image URL)</label>
+              {/* Product Image: Manual Upload + Image URL */}
+              <div className="space-y-2 p-3.5 bg-gray-50/80 rounded-2xl border border-gray-200">
+                <label className="block font-bold text-gray-700">পণ্যের ছবি (Product Image) *</label>
+
+                {/* Option 1: Device File Upload */}
+                <div>
+                  <label className="border-2 border-dashed border-gray-300 hover:border-purple-600 bg-white rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer transition-colors group">
+                    <UploadCloud className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                    <span className="font-bold text-gray-700">ডিভাইস থেকে ছবি আপলোড করুন</span>
+                    <span className="text-[10px] text-gray-400">(JPG, PNG, WEBP)</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 text-gray-400 text-[10px] justify-center my-1">
+                  <span className="h-px bg-gray-200 flex-1" />
+                  <span>অথবা ছবির লিঙ্ক (URL) দিন</span>
+                  <span className="h-px bg-gray-200 flex-1" />
+                </div>
+
+                {/* Option 2: Image URL */}
                 <input
                   type="url"
                   value={newImage}
                   onChange={(e) => setNewImage(e.target.value)}
                   placeholder="https://images.unsplash.com/..."
-                  className="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+                  className="w-full p-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-purple-600"
                 />
+
+                {/* Preview Thumbnail */}
+                {newImage && (
+                  <div className="flex items-center gap-3 pt-2">
+                    <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-purple-200 bg-white shadow-2xs group">
+                      <img
+                        src={newImage}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNewImage("")}
+                        className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-90 hover:opacity-100 transition-opacity"
+                        title="ছবি মুছে ফেলুন"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="text-[11px] text-gray-600">
+                      <span className="font-bold text-emerald-600 block">✓ ছবি সিলেক্ট করা হয়েছে</span>
+                      <span>ছবি পরিবর্তন করতে নতুন ছবি আপলোড বা লিঙ্ক দিন</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

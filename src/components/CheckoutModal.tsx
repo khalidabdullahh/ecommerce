@@ -254,7 +254,7 @@ export const CheckoutModal: React.FC = () => {
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="যেমন: মোঃ সাকিব হাসান"
+                placeholder="যেমন: Khalid Abdullah"
                 className={`w-full text-xs p-2.5 rounded-xl border bg-gray-50 focus:bg-white focus:outline-none transition-all ${
                   formErrors.name ? "border-red-500 focus:ring-1 focus:ring-red-200" : "border-gray-200 focus:border-orange-500"
                 }`}
