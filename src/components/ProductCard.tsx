@@ -98,7 +98,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {/* Product Title */}
           <h3
             onClick={() => setQuickViewProduct(product)}
-            className="text-xs sm:text-sm font-medium text-gray-800 line-clamp-2 hover:text-orange-600 cursor-pointer transition-colors leading-snug mb-2"
+            className="text-xs sm:text-sm font-medium text-gray-800 line-clamp-2 min-h-[2.5rem] hover:text-orange-600 cursor-pointer transition-colors leading-snug mb-2"
             title={product.title}
           >
             {product.title}

@@ -59,15 +59,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (saved) {
         try {
           const parsed: Product[] = JSON.parse(saved);
-          return parsed.map((p) => {
-            if (p.id === "p14" && (p.images[0]?.includes("photo-1607344645866") || !p.images[0])) {
-              return {
-                ...p,
-                images: ["https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=800&auto=format&fit=crop&q=80"]
-              };
-            }
-            return p;
-          });
+          if (parsed.length >= initialProducts.length) {
+            return parsed.map((p) => {
+              if (p.id === "p14") {
+                return {
+                  ...p,
+                  title: "Premium Handcrafted Leather Crossbody Bag",
+                  banglaTitle: "হ্যান্ডক্রাফটেড প্রিমিয়াম লেদার ক্রস বডি ও ট্রাভেল ব্যাগ",
+                  images: ["https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&auto=format&fit=crop&q=80"]
+                };
+              }
+              return p;
+            });
+          }
         } catch (e) {
           console.error("Failed to parse saved products", e);
         }

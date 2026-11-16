@@ -49,11 +49,11 @@ export default function HomePage() {
   }, [products, selectedCategory, searchQuery]);
 
   const popularProducts = useMemo(() => {
-    return products.filter((p) => p.isPopular).slice(0, 4);
+    return products.filter((p) => p.isPopular).slice(0, 8);
   }, [products]);
 
   const featuredCollections = useMemo(() => {
-    return products.filter((p) => p.isFeatured).slice(0, 4);
+    return products.filter((p) => p.isFeatured).slice(0, 8);
   }, [products]);
 
   return (
