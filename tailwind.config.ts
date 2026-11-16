@@ -8,6 +8,17 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          '"Kohinoor Bangla"',
+          'KohinoorBangla',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          'sans-serif',
+        ],
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",

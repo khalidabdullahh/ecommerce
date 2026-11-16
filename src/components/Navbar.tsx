@@ -19,25 +19,25 @@ export const Navbar: React.FC = () => {
     <header className="sticky top-0 z-40 bg-white border-b border-gray-100 shadow-sm">
       {/* Top Notice Bar with Updated Helpline */}
       <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 text-white text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2">
-        <span>🔥 k commerce স্পেশাল অফার! সারা বাংলাদেশে ক্যাশ অন ডেলিভারি</span>
+        <span>🔥 K Commerce স্পেশাল অফার! সারা বাংলাদেশে ক্যাশ অন ডেলিভারি</span>
         <span className="hidden sm:inline">| হেল্পলাইন: 01643526721</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-2.5 sm:py-3">
         <div className="flex items-center justify-between gap-3 sm:gap-6">
-          {/* Logo with uploaded image and "k commerce" text */}
+          {/* Logo with uploaded image and "K Commerce" text */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
             <div className="relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl overflow-hidden bg-white border border-gray-100 shadow-xs flex items-center justify-center p-0.5 group-hover:scale-105 transition-transform">
               <img
                 src="/logo.png"
-                alt="k commerce"
+                alt="K Commerce"
                 className="w-full h-full object-contain"
               />
             </div>
             <div className="flex flex-col">
               <div className="flex items-baseline">
-                <span className="text-xl sm:text-2xl font-black tracking-tight text-purple-700">k</span>
-                <span className="text-xl sm:text-2xl font-black tracking-tight text-gray-950 ml-1">commerce</span>
+                <span className="text-xl sm:text-2xl font-black tracking-tight text-purple-700">K</span>
+                <span className="text-xl sm:text-2xl font-black tracking-tight text-gray-950 ml-1">Commerce</span>
               </div>
               <span className="text-[9px] font-bold text-gray-400 tracking-widest uppercase -mt-1 hidden sm:block">
                 Online Shop
@@ -52,7 +52,7 @@ export const Navbar: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products in k commerce..."
+                placeholder="Search products in K Commerce..."
                 className="w-full bg-gray-50 hover:bg-gray-100/80 focus:bg-white text-gray-800 text-sm pl-4 pr-20 py-2 sm:py-2.5 rounded-full border border-gray-200 focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-100 transition-all"
               />
               <div className="absolute right-1.5 flex items-center gap-1">
