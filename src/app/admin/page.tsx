@@ -1,0 +1,545 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import { Navbar } from "@/components/Navbar";
+import { BottomNav } from "@/components/BottomNav";
+import { useStore } from "@/context/StoreContext";
+import {
+  ShieldCheck,
+  TrendingUp,
+  Package,
+  Truck,
+  Trash2,
+  CheckCircle,
+  Clock,
+  ArrowLeft
+} from "lucide-react";
+import { OrderStatus } from "@/types";
+
+export default function AdminPage() {
+  const {
+    orders,
+    updateOrderStatus,
+    assignCourier,
+    products,
+    addProduct,
+    deleteProduct,
+    updateProduct
+  } = useStore();
+
+  const [activeTab, setActiveTab] = useState<"orders" | "products" | "new_product">("orders");
+
+  // New Product Form State
+  const [newTitle, setNewTitle] = useState("");
+  const [newBanglaTitle, setNewBanglaTitle] = useState("");
+  const [newCategory, setNewCategory] = useState("Mens Fashion");
+  const [newPrice, setNewPrice] = useState("");
+  const [newOrigPrice, setNewOrigPrice] = useState("");
+  const [newImage, setNewImage] = useState("");
+  const [newSizes, setNewSizes] = useState("M, L, XL");
+  const [newDescription, setNewDescription] = useState("");
+
+  // KPI Calculations
+  const totalSales = orders.reduce((sum, ord) => sum + ord.grandTotal, 0);
+  const pendingCount = orders.filter((o) => o.orderStatus === "Pending").length;
+  const inCourierCount = orders.filter((o) => o.orderStatus === "In Courier").length;
+  const deliveredCount = orders.filter((o) => o.orderStatus === "Delivered").length;
+
+  const handleCreateProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle || !newPrice) {
+      alert("প্রোডাক্টের নাম এবং মূল্য অবশ্যই দিতে হবে");
+      return;
+    }
+
+    const sizesArr = newSizes.split(",").map((s) => s.trim()).filter(Boolean);
+
+    addProduct({
+      title: newTitle,
+      banglaTitle: newBanglaTitle || undefined,
+      category: newCategory,
+      price: parseFloat(newPrice),
+      originalPrice: newOrigPrice ? parseFloat(newOrigPrice) : undefined,
+      rating: 4.8,
+      soldCount: "1 sold",
+      images: [
+        newImage ||
+          "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80"
+      ],
+      description: newDescription || "প্রিমিয়াম কোয়ালিটি পণ্য।",
+      sizes: sizesArr.length > 0 ? sizesArr : ["Standard"],
+      colors: [{ name: "Classic", hex: "#18181b" }],
+      inStock: true
+    });
+
+    alert("নতুন পণ্য সফলভাবে যুক্ত করা হয়েছে!");
+    setNewTitle("");
+    setNewBanglaTitle("");
+    setNewPrice("");
+    setNewOrigPrice("");
+    setNewImage("");
+    setNewDescription("");
+    setActiveTab("products");
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] text-gray-900 pb-20 md:pb-12">
+      <Navbar />
+
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Top Header */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="p-2 bg-white rounded-xl border border-gray-200 hover:border-orange-500 text-gray-600 hover:text-orange-600 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-purple-600" />
+                <h1 className="text-xl font-extrabold text-gray-900">
+                  অ্যাডমিন ড্যাশবোর্ড (Store Management)
+                </h1>
+              </div>
+              <p className="text-xs text-gray-500">
+                অর্ডার ম্যানেজমেন্ট, স্টেডফাস্ট/পাঠাও কুরিয়ার বুকিং ও ইনভেন্টরি কন্ট্রোল
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab("orders")}
+              className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
+                activeTab === "orders"
+                  ? "bg-purple-700 text-white shadow-sm"
+                  : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              📦 অর্ডার সমূহ ({orders.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("products")}
+              className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
+                activeTab === "products"
+                  ? "bg-purple-700 text-white shadow-sm"
+                  : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              🛍️ প্রোডাক্ট তালিকা ({products.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("new_product")}
+              className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
+                activeTab === "new_product"
+                  ? "bg-purple-700 text-white shadow-sm"
+                  : "bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
+              }`}
+            >
+              + নতুন পণ্য যোগ করুন
+            </button>
+          </div>
+        </div>
+
+        {/* KPI Summary Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+              <span>মোট সেলস (Revenue)</span>
+              <TrendingUp className="w-4 h-4 text-emerald-500" />
+            </div>
+            <div className="text-xl font-black text-gray-900">
+              ৳{totalSales.toLocaleString("en-BD")}
+            </div>
+            <span className="text-[10px] text-emerald-600 font-semibold">লাইভ ট্রানজেকশন ডেটা</span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+              <span>পেন্ডিং অর্ডার (Pending)</span>
+              <Clock className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="text-xl font-black text-amber-600">{pendingCount}</div>
+            <span className="text-[10px] text-gray-400">কনফার্মেশন প্রয়োজন</span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+              <span>কুরিয়ারে হস্তান্তর (In Courier)</span>
+              <Truck className="w-4 h-4 text-blue-500" />
+            </div>
+            <div className="text-xl font-black text-blue-600">{inCourierCount}</div>
+            <span className="text-[10px] text-blue-500 font-semibold">Steadfast / Pathao</span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+              <span>সফল ডেলিভারি (Delivered)</span>
+              <CheckCircle className="w-4 h-4 text-emerald-500" />
+            </div>
+            <div className="text-xl font-black text-emerald-600">{deliveredCount}</div>
+            <span className="text-[10px] text-emerald-600 font-semibold">পেমেন্ট সম্পন্ন</span>
+          </div>
+        </div>
+
+        {/* Tab 1: Orders Management */}
+        {activeTab === "orders" && (
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">সাম্প্রতিক অর্ডারসমূহ</h3>
+                <p className="text-xs text-gray-500">
+                  অর্ডারের স্ট্যাটাস পরিবর্তন করুন ও ১-ক্লিকে কুরিয়ারে বুক করুন
+                </p>
+              </div>
+            </div>
+
+            {orders.length === 0 ? (
+              <div className="p-12 text-center text-gray-400">
+                <Package className="w-12 h-12 stroke-1 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm font-semibold">এখনো কোনো অর্ডার প্লেস হয়নি</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 text-gray-600 font-bold uppercase tracking-wider text-[10px] border-b border-gray-100">
+                    <tr>
+                      <th className="p-3.5">অর্ডার নম্বর</th>
+                      <th className="p-3.5">গ্রাহক ও মোবাইল</th>
+                      <th className="p-3.5">ঠিকানা ও এলাকা</th>
+                      <th className="p-3.5">পণ্য ও পরিমাণ</th>
+                      <th className="p-3.5">মোট মূল্য</th>
+                      <th className="p-3.5">পেমেন্ট</th>
+                      <th className="p-3.5">স্ট্যাটাস</th>
+                      <th className="p-3.5 text-right">কুরিয়ার এপিআই বুকিং</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {orders.map((ord) => (
+                      <tr key={ord.id} className="hover:bg-gray-50/70 transition-colors">
+                        <td className="p-3.5 font-black text-gray-900 font-mono">
+                          {ord.orderNumber}
+                          <div className="text-[10px] font-normal text-gray-400">
+                            {new Date(ord.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </td>
+
+                        <td className="p-3.5">
+                          <strong className="text-gray-900 block">{ord.customerName}</strong>
+                          <span className="text-gray-500 font-mono">{ord.customerPhone}</span>
+                        </td>
+
+                        <td className="p-3.5 max-w-xs">
+                          <p className="truncate text-gray-700">{ord.deliveryAddress}</p>
+                          <span className="text-[10px] font-semibold text-orange-600">
+                            {ord.deliveryArea === "inside_dhaka" ? "ঢাকার ভেতরে (৳৭০)" : "ঢাকার বাইরে (৳১৩০)"}
+                          </span>
+                        </td>
+
+                        <td className="p-3.5">
+                          <div className="space-y-1">
+                            {ord.items.map((item, idx) => (
+                              <div key={idx} className="text-gray-800">
+                                <span className="font-semibold">{item.title}</span>{" "}
+                                <span className="text-gray-500">
+                                  ({item.size}, {item.color}) x{item.quantity}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+
+                        <td className="p-3.5 font-black text-gray-900">
+                          ৳{ord.grandTotal.toLocaleString("en-BD")}
+                        </td>
+
+                        <td className="p-3.5">
+                          <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                            ord.paymentMethod === "bkash"
+                              ? "bg-pink-100 text-pink-700"
+                              : "bg-gray-100 text-gray-800"
+                          }`}>
+                            {ord.paymentMethod === "bkash" ? "bKash (Paid)" : "Cash on Delivery"}
+                          </span>
+                        </td>
+
+                        <td className="p-3.5">
+                          <select
+                            value={ord.orderStatus}
+                            onChange={(e) => updateOrderStatus(ord.id, e.target.value as OrderStatus)}
+                            className="text-xs font-bold rounded-lg border border-gray-200 bg-white px-2 py-1 focus:outline-none focus:border-purple-500"
+                          >
+                            <option value="Pending">⏳ Pending</option>
+                            <option value="Confirmed">👍 Confirmed</option>
+                            <option value="In Courier">🚚 In Courier</option>
+                            <option value="Delivered">✅ Delivered</option>
+                            <option value="Cancelled">❌ Cancelled</option>
+                          </select>
+                        </td>
+
+                        <td className="p-3.5 text-right">
+                          {ord.courierTrackingCode ? (
+                            <div className="text-right">
+                              <span className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-md block">
+                                {ord.courierTrackingCode}
+                              </span>
+                              <span className="text-[10px] text-gray-400">
+                                {ord.courierName || "Steadfast"}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => assignCourier(ord.id, "Steadfast")}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg shadow-xs transition-colors"
+                                title="Book consignment on Steadfast API"
+                              >
+                                Steadfast
+                              </button>
+                              <button
+                                onClick={() => assignCourier(ord.id, "Pathao")}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg shadow-xs transition-colors"
+                                title="Book consignment on Pathao API"
+                              >
+                                Pathao
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 2: Products Management */}
+        {activeTab === "products" && (
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">প্রোডাক্ট তালিকা ({products.length})</h3>
+                <p className="text-xs text-gray-500">ইন-স্টক বা আউট-অব-স্টক টগল করুন অথবা এডিট করুন</p>
+              </div>
+              <button
+                onClick={() => setActiveTab("new_product")}
+                className="bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl"
+              >
+                + নতুন প্রোডাক্ট
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-600 font-bold uppercase tracking-wider text-[10px] border-b border-gray-100">
+                  <tr>
+                    <th className="p-3.5">ছবি ও নাম</th>
+                    <th className="p-3.5">ক্যাটাগরি</th>
+                    <th className="p-3.5">মূল্য (৳)</th>
+                    <th className="p-3.5">রেটিং ও সেলস</th>
+                    <th className="p-3.5">স্টক স্ট্যাটাস</th>
+                    <th className="p-3.5 text-right">একশন</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {products.map((p) => (
+                    <tr key={p.id} className="hover:bg-gray-50/70 transition-colors">
+                      <td className="p-3.5 flex items-center gap-2.5">
+                        <img
+                          src={p.images[0]}
+                          alt={p.title}
+                          className="w-10 h-10 rounded-lg object-cover bg-gray-50 shrink-0"
+                        />
+                        <div>
+                          <strong className="text-gray-900 block truncate max-w-xs">{p.title}</strong>
+                          {p.banglaTitle && (
+                            <span className="text-[10px] text-gray-400 block">{p.banglaTitle}</span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="p-3.5">
+                        <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-semibold text-[10px]">
+                          {p.category}
+                        </span>
+                      </td>
+
+                      <td className="p-3.5 font-black text-gray-900">
+                        ৳{p.price.toLocaleString("en-BD")}
+                      </td>
+
+                      <td className="p-3.5 text-gray-500">
+                        ★ {p.rating} ({p.soldCount})
+                      </td>
+
+                      <td className="p-3.5">
+                        <button
+                          onClick={() => updateProduct(p.id, { inStock: !p.inStock })}
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors ${
+                            p.inStock
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {p.inStock ? "ইন স্টক (In Stock)" : "আউট অব স্টক"}
+                        </button>
+                      </td>
+
+                      <td className="p-3.5 text-right">
+                        <button
+                          onClick={() => {
+                            if (confirm(`আপনি কি "${p.title}" পণ্যটি ডিলিট করতে চান?`)) {
+                              deleteProduct(p.id);
+                            }
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                          title="Delete Product"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: New Product Form */}
+        {activeTab === "new_product" && (
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 max-w-2xl mx-auto">
+            <h3 className="text-base font-bold text-gray-900 mb-1">নতুন পণ্য যুক্ত করুন</h3>
+            <p className="text-xs text-gray-500 mb-6">
+              প্রোডাক্টের বিবরণ, ক্যাটাগরি, সাইজ এবং ছবি প্রদান করুন
+            </p>
+
+            <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">পণ্যের ইংরেজি নাম *</label>
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="e.g. Vintage Winter Corduroy Jacket"
+                  className="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">পণ্যের বাংলা নাম</label>
+                <input
+                  type="text"
+                  value={newBanglaTitle}
+                  onChange={(e) => setNewBanglaTitle(e.target.value)}
+                  placeholder="যেমন: ভিন্টেজ উইন্টার কর্ডুরয় জ্যাকেট"
+                  className="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">ক্যাটাগরি</label>
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+                  >
+                    <option value="Mens Fashion">Mens Fashion</option>
+                    <option value="Winter Wear">Winter Wear</option>
+                    <option value="Womens Collection">Womens Collection</option>
+                    <option value="Formal & Party">Formal & Party</option>
+                    <option value="Home & Kitchen">Home & Kitchen</option>
+                    <option value="Gadgets & Accessories">Gadgets & Accessories</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">বিক্রয় মূল্য (৳) *</label>
+                  <input
+                    type="number"
+                    value={newPrice}
+                    onChange={(e) => setNewPrice(e.target.value)}
+                    placeholder="1250"
+                    className="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">আসল মূল্য / ছাড় পূর্বের মূল্য (৳)</label>
+                  <input
+                    type="number"
+                    value={newOrigPrice}
+                    onChange={(e) => setNewOrigPrice(e.target.value)}
+                    placeholder="1650"
+                    className="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">সাইজসমূহ (কমা দিয়ে আলাদা করুন)</label>
+                  <input
+                    type="text"
+                    value={newSizes}
+                    onChange={(e) => setNewSizes(e.target.value)}
+                    placeholder="M, L, XL, XXL"
+                    className="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">ছবির লিঙ্ক (Image URL)</label>
+                <input
+                  type="url"
+                  value={newImage}
+                  onChange={(e) => setNewImage(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">বিবরণ (Description)</label>
+                <textarea
+                  rows={3}
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="ফেব্ৰিক, কোয়ালিটি ও ফিটিং সংক্রান্ত তথ্য..."
+                  className="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("products")}
+                  className="bg-gray-200 text-gray-800 font-bold px-4 py-2.5 rounded-xl"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-purple-700 hover:bg-purple-800 text-white font-bold py-2.5 rounded-xl shadow-md"
+                >
+                  প্রোডাক্ট সেভ করুন
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </main>
+
+      <BottomNav />
+    </div>
+  );
+}
