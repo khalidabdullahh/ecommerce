@@ -304,7 +304,7 @@ export const initialProducts: Product[] = [
     rating: 4.5,
     soldCount: "100k sold",
     images: [
-      "https://images.unsplash.com/photo-1607344645866-009c320c5ab8?w=800&auto=format&fit=crop&q=80"
+      "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=800&auto=format&fit=crop&q=80"
     ],
     description: "ই-কমার্স ব্যবসায়ীদের কাপড়ের প্যাকেজিংয়ের জন্য প্রিমিয়াম ক্রিস্টাল ক্লিয়ার OPP ব্যাগ (১০০০ পিসের বান্ডেল)। স্ট্রং আঠা ও টেকসই।",
     sizes: ["1000 Pcs"],

@@ -40,7 +40,7 @@ export const FloatingChat: React.FC = () => {
             </a>
 
             <a
-              href="https://m.me/"
+              href="https://www.facebook.com/khalid.abdulllah/"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold p-2.5 rounded-xl transition-all shadow-xs"

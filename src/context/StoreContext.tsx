@@ -58,7 +58,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const saved = localStorage.getItem("easybuy_products");
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const parsed: Product[] = JSON.parse(saved);
+          return parsed.map((p) => {
+            if (p.id === "p14" && (p.images[0]?.includes("photo-1607344645866") || !p.images[0])) {
+              return {
+                ...p,
+                images: ["https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=800&auto=format&fit=crop&q=80"]
+              };
+            }
+            return p;
+          });
         } catch (e) {
           console.error("Failed to parse saved products", e);
         }
