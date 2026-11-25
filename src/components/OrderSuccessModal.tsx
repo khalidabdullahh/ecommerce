@@ -46,7 +46,7 @@ export const OrderSuccessModal: React.FC = () => {
           <div className="flex justify-between items-center">
             <span className="text-gray-500">পেমেন্ট মেথড:</span>
             <span className="font-bold text-gray-800">
-              {lastCompletedOrder.paymentMethod === "cod" ? "Cash on Delivery" : "bKash (Paid)"}
+              {lastCompletedOrder.paymentMethod === "cod" ? "Cash on Delivery" : "bKash (যাচাই করা হবে)"}
             </span>
           </div>
 

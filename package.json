@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:seed:generate": "node scripts/generate-seed.mjs",
+    "dev:cf": "next build && wrangler pages dev out --d1=DB --compatibility-date=2024-11-01",
+    "typecheck:functions": "tsc -p functions"
   },
   "dependencies": {
     "@fontsource/noto-sans-bengali": "^5.3.0",
@@ -17,6 +20,7 @@
     "react-dom": "^18"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261125.1",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^18",
@@ -25,6 +29,7 @@
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.168.0"
   }
 }

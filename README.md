@@ -103,10 +103,11 @@ src/
 
 ---
 
-## ⚠️ বর্তমান অবস্থা (Status)
+## ✅ বর্তমান অবস্থা (Status)
 
-এটি এখন **ফ্রন্টএন্ড-অনলি ডেমো**। products, cart ও orders ব্রাউজারের `localStorage`-এ থাকে, তাই অর্ডার অ্যাডমিন প্যানেলে সবার কাছে পৌঁছায় না। bKash পেমেন্ট ও কুরিয়ার বুকিং সিমুলেটেড। আসল অর্ডার নিতে ব্যাকএন্ড (ডাটাবেস, অ্যাডমিন লগইন, কুরিয়ার/পেমেন্ট API) যোগ করতে হবে।
+প্রোডাক্ট, অর্ডার ও অ্যাডমিন লগইন এখন **Cloudflare D1 + Pages Functions** (`functions/`) দিয়ে চলে। সেটআপ: [SETUP-D1.md](./SETUP-D1.md)।
+কার্ট ও উইশলিস্ট ব্রাউজারের `localStorage`-এ থাকে। কুরিয়ার এখনো ম্যানুয়াল ট্র্যাকিং কোড, বিকাশ ম্যানুয়াল TrxID যাচাই।
 
 ## ☁️ ডিপ্লয়
 
-`next.config.mjs`-এ `output: "export"` আছে। `npm run build` করলে `out/` ফোল্ডার তৈরি হয়, যা Cloudflare Pages-এ ডিপ্লয় হয়।
+`next.config.mjs`-এ `output: "export"` আছে। `npm run build` করলে `out/` তৈরি হয়, যা Cloudflare Pages-এ ডিপ্লয় হয় (API: `functions/api/*`)।

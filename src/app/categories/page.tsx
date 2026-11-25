@@ -9,7 +9,6 @@ import { ArrowRight, Grid } from "lucide-react";
 import { ProductDetailModal } from "@/components/ProductDetailModal";
 import { CartDrawer } from "@/components/CartDrawer";
 import { CheckoutModal } from "@/components/CheckoutModal";
-import { BKashPaymentModal } from "@/components/BKashPaymentModal";
 import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { ImageSearchModal } from "@/components/ImageSearchModal";
 
@@ -118,7 +117,6 @@ export default function CategoriesPage() {
       <ProductDetailModal />
       <CartDrawer />
       <CheckoutModal />
-      <BKashPaymentModal />
       <OrderSuccessModal />
       <ImageSearchModal />
     </div>

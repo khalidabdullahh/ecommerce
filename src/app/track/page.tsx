@@ -4,29 +4,41 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { BottomNav } from "@/components/BottomNav";
-import { useStore } from "@/context/StoreContext";
+import { api } from "@/lib/api";
+import { Order } from "@/types";
 import { Package, Search, CheckCircle2, Truck, ArrowLeft } from "lucide-react";
 import { CartDrawer } from "@/components/CartDrawer";
 import { CheckoutModal } from "@/components/CheckoutModal";
-import { BKashPaymentModal } from "@/components/BKashPaymentModal";
 import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { ImageSearchModal } from "@/components/ImageSearchModal";
 import { ProductDetailModal } from "@/components/ProductDetailModal";
 
 export default function TrackOrderPage() {
-  const { orders } = useStore();
-  const [searchInput, setSearchInput] = useState("");
+  const [orderNumber, setOrderNumber] = useState("");
+  const [phone, setPhone] = useState("");
   const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [matchedOrders, setMatchedOrders] = useState<Order[]>([]);
 
-  // Search by orderNumber or phone
-  const matchedOrders = orders.filter((o) => {
-    if (!searchInput.trim()) return false;
-    const cleanSearch = searchInput.trim().toLowerCase();
-    return (
-      o.orderNumber.toLowerCase().includes(cleanSearch) ||
-      o.customerPhone.includes(cleanSearch)
-    );
-  });
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+    setLoading(true);
+    setError("");
+    setSearched(false);
+    try {
+      const qs = new URLSearchParams({ order: orderNumber.trim(), phone: phone.trim() });
+      const r = await api<{ order: Order }>(`/api/track?${qs.toString()}`);
+      setMatchedOrders([r.order]);
+    } catch (err) {
+      setMatchedOrders([]);
+      setError(err instanceof Error && (err as { status?: number }).status !== 404 ? err.message : "");
+    } finally {
+      setSearched(true);
+      setLoading(false);
+    }
+  };
 
   const getStepIndex = (status: string) => {
     switch (status) {
@@ -65,29 +77,34 @@ export default function TrackOrderPage() {
             আপনার অর্ডার ট্র্যাক করুন (Track Order)
           </h1>
           <p className="text-xs text-gray-500 max-w-md mx-auto mb-5">
-            অর্ডারের বর্তমান অবস্থা ও কুরিয়ার ট্র্যাকিং জানতে অর্ডার নম্বর  অথবা মোবাইল নম্বর প্রদান করুন।
+            অর্ডারের বর্তমান অবস্থা ও কুরিয়ার ট্র্যাকিং জানতে অর্ডার নম্বর ও অর্ডারের সময় দেওয়া মোবাইল নম্বর দিন।
           </p>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSearched(true);
-            }}
-            className="flex items-center max-w-md mx-auto relative"
-          >
+          <form onSubmit={handleSearch} className="max-w-md mx-auto space-y-2.5 text-left">
             <input
               type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="অর্ডার নম্বর বা ফোন নম্বর"
-              className="w-full text-xs sm:text-sm pl-4 pr-24 py-3 rounded-2xl border border-gray-200 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100 bg-gray-50/70"
+              value={orderNumber}
+              onChange={(e) => setOrderNumber(e.target.value)}
+              placeholder="অর্ডার নম্বর (যেমন: BD-123456)"
+              required
+              className="w-full text-xs sm:text-sm px-4 py-3 rounded-2xl border border-gray-200 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100 bg-gray-50/70"
+            />
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="মোবাইল নম্বর (যেমন: 017XXXXXXXX)"
+              required
+              className="w-full text-xs sm:text-sm px-4 py-3 rounded-2xl border border-gray-200 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100 bg-gray-50/70"
             />
             <button
               type="submit"
-              className="absolute right-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all flex items-center gap-1.5"
+              disabled={loading}
+              className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-xs sm:text-sm font-bold px-4 py-3 rounded-2xl transition-all flex items-center justify-center gap-1.5"
             >
-              <Search className="w-3.5 h-3.5" />
-              <span>খুঁজুন</span>
+              <Search className="w-4 h-4" />
+              <span>{loading ? "খোঁজা হচ্ছে..." : "অর্ডার খুঁজুন"}</span>
             </button>
           </form>
 
@@ -292,7 +309,6 @@ export default function TrackOrderPage() {
       <ProductDetailModal />
       <CartDrawer />
       <CheckoutModal />
-      <BKashPaymentModal />
       <OrderSuccessModal />
       <ImageSearchModal />
     </div>

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { BottomNav } from "@/components/BottomNav";
 import { useStore } from "@/context/StoreContext";
+import { api, ApiError } from "@/lib/api";
 import {
   ShieldCheck,
   TrendingUp,
@@ -15,20 +16,77 @@ import {
   Clock,
   ArrowLeft,
   UploadCloud,
-  X
+  X,
+  LogOut,
+  RefreshCw,
+  Lock
 } from "lucide-react";
-import { OrderStatus } from "@/types";
+import { Order, OrderStatus, Product } from "@/types";
 
-export default function AdminPage() {
-  const {
-    orders,
-    updateOrderStatus,
-    assignCourier,
-    products,
-    addProduct,
-    deleteProduct,
-    updateProduct
-  } = useStore();
+function AdminDashboard({ onLogout }: { onLogout: () => void }) {
+  const { products, reloadProducts } = useStore();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+
+  // Any 401 means the 8-hour session expired -> back to the login screen.
+  const guard = useCallback(
+    async <T,>(fn: () => Promise<T>): Promise<T> => {
+      try {
+        return await fn();
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) onLogout();
+        throw e;
+      }
+    },
+    [onLogout]
+  );
+
+  const loadOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    try {
+      const r = await guard(() => api<{ orders: Order[] }>("/api/admin/orders"));
+      setOrders(r.orders);
+    } catch {
+      /* shown as empty list; 401 handled by guard */
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, [guard]);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  const patchOrder = async (id: string, body: Record<string, unknown>) => {
+    try {
+      await guard(() => api(`/api/admin/orders/${id}`, { method: "PATCH", body }));
+      await loadOrders();
+    } catch (e) {
+      if (!(e instanceof ApiError && e.status === 401)) alert(e instanceof Error ? e.message : "আপডেট করা যায়নি");
+    }
+  };
+  const updateOrderStatus = (id: string, status: OrderStatus) => patchOrder(id, { orderStatus: status });
+
+  const addProduct = async (product: Omit<Product, "id">) => {
+    await guard(() => api("/api/admin/products", { body: product }));
+    reloadProducts();
+  };
+  const updateProduct = async (id: string, patch: Partial<Product>) => {
+    try {
+      await guard(() => api(`/api/admin/products/${id}`, { method: "PUT", body: patch }));
+      reloadProducts();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "আপডেট করা যায়নি");
+    }
+  };
+  const deleteProduct = async (id: string) => {
+    try {
+      await guard(() => api(`/api/admin/products/${id}`, { method: "DELETE" }));
+      reloadProducts();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "ডিলিট করা যায়নি");
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<"orders" | "products" | "new_product">("orders");
 
@@ -44,26 +102,42 @@ export default function AdminPage() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert("ছবির সাইজ সর্বোচ্চ 5MB হতে পারে");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert("ছবির সাইজ সর্বোচ্চ 10MB হতে পারে");
+      return;
     }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onload = () => {
+        // Shrink to <=900px JPEG so it fits in the database comfortably.
+        const scale = Math.min(1, 900 / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        let out = canvas.toDataURL("image/jpeg", 0.8);
+        if (out.length > 440_000) out = canvas.toDataURL("image/jpeg", 0.6);
+        if (out.length > 440_000) {
+          alert("ছবিটি অনেক বড়, ছোট ছবি ব্যবহার করুন");
+          return;
+        }
+        setNewImage(out);
+      };
+      img.onerror = () => alert("ছবিটি পড়া যায়নি");
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   // KPI Calculations
-  const totalSales = orders.reduce((sum, ord) => sum + ord.grandTotal, 0);
+  const totalSales = orders.filter((o) => o.orderStatus !== "Cancelled").reduce((sum, ord) => sum + ord.grandTotal, 0);
   const pendingCount = orders.filter((o) => o.orderStatus === "Pending").length;
   const inCourierCount = orders.filter((o) => o.orderStatus === "In Courier").length;
   const deliveredCount = orders.filter((o) => o.orderStatus === "Delivered").length;
 
-  const handleCreateProduct = (e: React.FormEvent) => {
+  const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newPrice) {
       alert("প্রোডাক্টের নাম এবং মূল্য অবশ্যই দিতে হবে");
@@ -72,7 +146,7 @@ export default function AdminPage() {
 
     const sizesArr = newSizes.split(",").map((s) => s.trim()).filter(Boolean);
 
-    addProduct({
+    const created = await addProduct({
       title: newTitle,
       banglaTitle: newBanglaTitle || undefined,
       category: newCategory,
@@ -88,7 +162,11 @@ export default function AdminPage() {
       sizes: sizesArr.length > 0 ? sizesArr : ["Standard"],
       colors: [{ name: "Classic", hex: "#18181b" }],
       inStock: true
+    }).then(() => true).catch((err: Error) => {
+      alert(err.message);
+      return false;
     });
+    if (!created) return;
 
     alert("নতুন পণ্য সফলভাবে যুক্ত করা হয়েছে!");
     setNewTitle("");
@@ -128,6 +206,23 @@ export default function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={loadOrders}
+              className="p-2 bg-white rounded-xl border border-gray-200 text-gray-600 hover:text-purple-700"
+              title="রিফ্রেশ"
+            >
+              <RefreshCw className={`w-4 h-4 ${ordersLoading ? "animate-spin" : ""}`} />
+            </button>
+            <button
+              onClick={async () => {
+                await api("/api/admin/logout", { method: "POST", body: {} }).catch(() => {});
+                onLogout();
+              }}
+              className="p-2 bg-white rounded-xl border border-gray-200 text-gray-600 hover:text-red-600"
+              title="লগআউট"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
             <button
               onClick={() => setActiveTab("orders")}
               className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
@@ -273,14 +368,36 @@ export default function AdminPage() {
                           ৳{ord.grandTotal.toLocaleString("en-BD")}
                         </td>
 
-                        <td className="p-3.5">
+                        <td className="p-3.5 space-y-1">
                           <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
                             ord.paymentMethod === "bkash"
                               ? "bg-pink-100 text-pink-700"
                               : "bg-gray-100 text-gray-800"
                           }`}>
-                            {ord.paymentMethod === "bkash" ? "bKash (Paid)" : "Cash on Delivery"}
+                            {ord.paymentMethod === "bkash" ? "bKash" : "Cash on Delivery"}
                           </span>
+                          {ord.paymentMethod === "bkash" && (
+                            <div className="text-[10px] text-gray-600 font-mono">
+                              TrxID: {ord.bkashTrxId}
+                              <br />
+                              From: {ord.bkashSender}
+                            </div>
+                          )}
+                          <div>
+                            <button
+                              onClick={() =>
+                                patchOrder(ord.id, { paymentStatus: ord.paymentStatus === "Paid" ? "Pending" : "Paid" })
+                              }
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                ord.paymentStatus === "Paid"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                              title="ক্লিক করে পেমেন্ট স্ট্যাটাস বদলান"
+                            >
+                              {ord.paymentStatus === "Paid" ? "✓ Paid" : "Unpaid (mark paid)"}
+                            </button>
+                          </div>
                         </td>
 
                         <td className="p-3.5">
@@ -298,33 +415,9 @@ export default function AdminPage() {
                         </td>
 
                         <td className="p-3.5 text-right">
-                          {ord.courierTrackingCode ? (
-                            <div className="text-right">
-                              <span className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-md block">
-                                {ord.courierTrackingCode}
-                              </span>
-                              <span className="text-[10px] text-gray-400">
-                                {ord.courierName || "Steadfast"}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => assignCourier(ord.id, "Steadfast")}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg shadow-xs transition-colors"
-                                title="Book consignment on Steadfast API"
-                              >
-                                Steadfast
-                              </button>
-                              <button
-                                onClick={() => assignCourier(ord.id, "Pathao")}
-                                className="bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg shadow-xs transition-colors"
-                                title="Book consignment on Pathao API"
-                              >
-                                Pathao
-                              </button>
-                            </div>
-                          )}
+                          <CourierCell order={ord} onSave={(courierName, code) =>
+                            patchOrder(ord.id, { courierName, courierTrackingCode: code, orderStatus: "In Courier" })
+                          } />
                         </td>
                       </tr>
                     ))}
@@ -606,6 +699,125 @@ export default function AdminPage() {
       </main>
 
       <BottomNav />
+    </div>
+  );
+}
+
+const COURIERS = ["Steadfast", "Pathao", "RedX"] as const;
+
+function CourierCell({ order, onSave }: { order: Order; onSave: (courier: string, code: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [courier, setCourier] = useState<string>(order.courierName || "Steadfast");
+  const [code, setCode] = useState(order.courierTrackingCode || "");
+
+  if (order.courierTrackingCode && !editing) {
+    return (
+      <div className="text-right">
+        <span className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-md block">
+          {order.courierTrackingCode}
+        </span>
+        <span className="text-[10px] text-gray-400">{order.courierName}</span>{" "}
+        <button onClick={() => setEditing(true)} className="text-[10px] text-purple-700 underline">
+          এডিট
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <select
+        value={courier}
+        onChange={(e) => setCourier(e.target.value)}
+        className="text-[11px] rounded-lg border border-gray-200 bg-white px-1.5 py-1"
+      >
+        {COURIERS.map((c) => (
+          <option key={c}>{c}</option>
+        ))}
+      </select>
+      <input
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        placeholder="ট্র্যাকিং কোড"
+        maxLength={60}
+        className="w-32 text-[11px] rounded-lg border border-gray-200 px-2 py-1 font-mono"
+      />
+      <button
+        disabled={!code.trim()}
+        onClick={() => {
+          onSave(courier, code.trim());
+          setEditing(false);
+        }}
+        className="bg-purple-700 disabled:opacity-40 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg"
+      >
+        সেভ ও কুরিয়ারে পাঠান
+      </button>
+    </div>
+  );
+}
+
+export default function AdminPage() {
+  const [state, setState] = useState<"checking" | "out" | "in">("checking");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api("/api/admin/me")
+      .then(() => setState("in"))
+      .catch(() => setState("out"));
+  }, []);
+
+  const login = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await api("/api/admin/login", { body: { password } });
+      setPassword("");
+      setState("in");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "লগইন করা যায়নি");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (state === "checking") {
+    return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">লোড হচ্ছে...</div>;
+  }
+  if (state === "in") return <AdminDashboard onLogout={() => setState("out")} />;
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
+      <form onSubmit={login} className="bg-white w-full max-w-sm rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h1 className="text-lg font-extrabold text-gray-900">অ্যাডমিন লগইন</h1>
+          <p className="text-xs text-gray-500">K Commerce স্টোর ম্যানেজমেন্ট</p>
+        </div>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="পাসওয়ার্ড"
+          autoFocus
+          autoComplete="current-password"
+          className="w-full text-sm px-4 py-3 rounded-2xl border border-gray-200 focus:border-purple-500 focus:outline-none bg-gray-50/70"
+        />
+        {error && <p className="text-xs text-red-600 font-semibold text-center">{error}</p>}
+        <button
+          type="submit"
+          disabled={busy || !password}
+          className="w-full bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white font-bold text-sm py-3 rounded-2xl"
+        >
+          {busy ? "অপেক্ষা করুন..." : "লগইন"}
+        </button>
+        <Link href="/" className="block text-center text-xs text-gray-400 hover:text-gray-600">
+          ← স্টোরে ফিরে যান
+        </Link>
+      </form>
     </div>
   );
 }
