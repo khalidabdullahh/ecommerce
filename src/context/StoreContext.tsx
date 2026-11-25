@@ -119,39 +119,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
     }
-    // Pre-seed with a realistic test order for demo
-    return [
-      {
-        id: "ord_101",
-        orderNumber: "BD-90214",
-        customerName: "Md. Tanvir Ahmed",
-        customerPhone: "01712345678",
-        deliveryAddress: "House 24, Road 7, Dhanmondi, Dhaka",
-        deliveryArea: "inside_dhaka",
-        deliveryFee: 70,
-        items: [
-          {
-            id: "p1-L-Denim Blue",
-            productId: "p1",
-            title: "Autumn and Winter fleece-lined Denim Jacket",
-            price: 1273,
-            image: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=800&auto=format&fit=crop&q=80",
-            size: "L",
-            color: "Denim Blue",
-            quantity: 1
-          }
-        ],
-        subtotal: 1273,
-        discount: 0,
-        grandTotal: 1343,
-        paymentMethod: "cod",
-        paymentStatus: "Pending",
-        orderStatus: "In Courier",
-        courierName: "Steadfast",
-        courierTrackingCode: "STDF-9938210",
-        createdAt: new Date(Date.now() - 86400000).toISOString()
-      }
-    ];
+    return [];
   });
 
   // Modal UI States

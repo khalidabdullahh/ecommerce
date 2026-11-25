@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import "@fontsource/noto-sans-bengali/400.css";
+import "@fontsource/noto-sans-bengali/600.css";
+import "@fontsource/noto-sans-bengali/700.css";
 import "./globals.css";
 import { StoreProvider } from "@/context/StoreContext";
 
@@ -21,15 +24,14 @@ export const metadata: Metadata = {
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",
-    apple: "/logo.png"
+    apple: "/apple-icon.png"
   }
 };
 
 export const viewport: Viewport = {
   themeColor: "#7e22ce",
   width: "device-width",
-  initialScale: 1,
-  maximumScale: 1
+  initialScale: 1
 };
 
 export default function RootLayout({

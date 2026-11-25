@@ -65,7 +65,7 @@ export default function TrackOrderPage() {
             আপনার অর্ডার ট্র্যাক করুন (Track Order)
           </h1>
           <p className="text-xs text-gray-500 max-w-md mx-auto mb-5">
-            অর্ডারের বর্তমান অবস্থা ও কুরিয়ার ট্র্যাকিং জানতে অর্ডার নম্বর (যেমন: BD-90214) অথবা মোবাইল নম্বর প্রদান করুন।
+            অর্ডারের বর্তমান অবস্থা ও কুরিয়ার ট্র্যাকিং জানতে অর্ডার নম্বর  অথবা মোবাইল নম্বর প্রদান করুন।
           </p>
 
           <form
@@ -79,7 +79,7 @@ export default function TrackOrderPage() {
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="অর্ডার নম্বর বা ফোন নম্বর (e.g. BD-90214)"
+              placeholder="অর্ডার নম্বর বা ফোন নম্বর"
               className="w-full text-xs sm:text-sm pl-4 pr-24 py-3 rounded-2xl border border-gray-200 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-100 bg-gray-50/70"
             />
             <button
@@ -91,20 +91,6 @@ export default function TrackOrderPage() {
             </button>
           </form>
 
-          {/* Quick preset hint */}
-          <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-gray-400">
-            <span>ডেমো ট্র্যাকিং টেস্ট:</span>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchInput("BD-90214");
-                setSearched(true);
-              }}
-              className="text-orange-600 font-bold underline"
-            >
-              BD-90214
-            </button>
-          </div>
         </div>
 
         {/* Results */}
