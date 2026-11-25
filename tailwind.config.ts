@@ -10,8 +10,8 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: [
+          '"Noto Sans Bengali"',
           '"Kohinoor Bangla"',
-          'KohinoorBangla',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Segoe UI"',
