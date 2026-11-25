@@ -1,14 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Product, CartItem, Order, OrderStatus } from "@/types";
+import { Product, CartItem, Order, NewOrderInput } from "@/types";
 import { initialProducts } from "@/data/initialProducts";
+import { api } from "@/lib/api";
 
 interface StoreContextType {
   products: Product[];
-  addProduct: (product: Omit<Product, "id">) => void;
-  updateProduct: (id: string, updated: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
+  productsLoading: boolean;
+  productsError: string;
+  reloadProducts: () => void;
 
   cart: CartItem[];
   addToCart: (product: Product, size?: string, color?: string, quantity?: number) => void;
@@ -22,10 +23,7 @@ interface StoreContextType {
   toggleWishlist: (productId: string) => void;
   isInWishlist: (productId: string) => boolean;
 
-  orders: Order[];
-  createOrder: (orderData: Omit<Order, "id" | "orderNumber" | "createdAt">) => Order;
-  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  assignCourier: (orderId: string, courierName: "Steadfast" | "Pathao" | "RedX") => void;
+  placeOrder: (input: NewOrderInput) => Promise<Order>;
 
   // Modals & Navigation States
   quickViewProduct: Product | null;
@@ -34,8 +32,6 @@ interface StoreContextType {
   setIsCartOpen: (open: boolean) => void;
   isCheckoutOpen: boolean;
   setIsCheckoutOpen: (open: boolean) => void;
-  isBKashOpen: boolean;
-  setIsBKashOpen: (open: boolean) => void;
   isOrderSuccessOpen: boolean;
   setIsOrderSuccessOpen: (open: boolean) => void;
   lastCompletedOrder: Order | null;
@@ -53,32 +49,10 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("easybuy_products");
-      if (saved) {
-        try {
-          const parsed: Product[] = JSON.parse(saved);
-          if (parsed.length >= initialProducts.length) {
-            return parsed.map((p) => {
-              if (p.id === "p14") {
-                return {
-                  ...p,
-                  title: "Premium Handcrafted Leather Crossbody Bag",
-                  banglaTitle: "হ্যান্ডক্রাফটেড প্রিমিয়াম লেদার ক্রস বডি ও ট্রাভেল ব্যাগ",
-                  images: ["https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&auto=format&fit=crop&q=80"]
-                };
-              }
-              return p;
-            });
-          }
-        } catch (e) {
-          console.error("Failed to parse saved products", e);
-        }
-      }
-    }
-    return initialProducts;
-  });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState("");
+  const [productsReloadKey, setProductsReloadKey] = useState(0);
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (typeof window !== "undefined") {
@@ -108,25 +82,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return [];
   });
 
-  const [orders, setOrders] = useState<Order[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("easybuy_orders");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.error("Failed to parse orders", e);
-        }
-      }
-    }
-    return [];
-  });
-
   // Modal UI States
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [isBKashOpen, setIsBKashOpen] = useState(false);
   const [isOrderSuccessOpen, setIsOrderSuccessOpen] = useState(false);
   const [lastCompletedOrder, setLastCompletedOrder] = useState<Order | null>(null);
   const [isImageSearchOpen, setIsImageSearchOpen] = useState(false);
@@ -136,8 +95,50 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   // Save to LocalStorage
+  // Load the catalogue from the D1-backed API (dev without the API falls back to the seed data).
   useEffect(() => {
-    localStorage.setItem("easybuy_products", JSON.stringify(products));
+    let cancelled = false;
+    setProductsLoading(true);
+    setProductsError("");
+    api<{ products: Product[] }>("/api/products")
+      .then((r) => {
+        if (!cancelled) setProducts(r.products);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        if (process.env.NODE_ENV !== "production") setProducts(initialProducts);
+        else setProductsError(e instanceof Error ? e.message : "প্রোডাক্ট লোড করা যায়নি");
+      })
+      .finally(() => {
+        if (!cancelled) setProductsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [productsReloadKey]);
+
+  // Old demo data lived in localStorage; orders/products are now server-side.
+  useEffect(() => {
+    try {
+      localStorage.removeItem("easybuy_products");
+      localStorage.removeItem("easybuy_orders");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Keep cart prices in sync with the live catalogue and drop items that no longer exist.
+  useEffect(() => {
+    if (!products.length) return;
+    setCart((prev) => {
+      const next = prev
+        .filter((i) => products.some((p) => p.id === i.productId && p.inStock))
+        .map((i) => {
+          const p = products.find((x) => x.id === i.productId)!;
+          return p.price === i.price ? i : { ...i, price: p.price };
+        });
+      return next.length === prev.length && next.every((n, idx) => n === prev[idx]) ? prev : next;
+    });
   }, [products]);
 
   useEffect(() => {
@@ -147,10 +148,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     localStorage.setItem("easybuy_wishlist", JSON.stringify(wishlist));
   }, [wishlist]);
-
-  useEffect(() => {
-    localStorage.setItem("easybuy_orders", JSON.stringify(orders));
-  }, [orders]);
 
   // Cart Functions
   const addToCart = (product: Product, size?: string, color?: string, quantity: number = 1) => {
@@ -213,69 +210,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const isInWishlist = (productId: string) => wishlist.includes(productId);
 
-  // Orders Functions
-  const createOrder = (orderData: Omit<Order, "id" | "orderNumber" | "createdAt">): Order => {
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
-    const newOrder: Order = {
-      ...orderData,
-      id: `ord_${Date.now()}`,
-      orderNumber: `BD-${randomNum}`,
-      createdAt: new Date().toISOString()
-    };
-
-    setOrders(prev => [newOrder, ...prev]);
+  const placeOrder = async (input: NewOrderInput): Promise<Order> => {
+    const { order } = await api<{ order: Order }>("/api/orders", { body: input });
     clearCart();
-    setLastCompletedOrder(newOrder);
+    setLastCompletedOrder(order);
     setIsOrderSuccessOpen(true);
-    return newOrder;
-  };
-
-  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setOrders(prev =>
-      prev.map(ord => (ord.id === orderId ? { ...ord, orderStatus: status } : ord))
-    );
-  };
-
-  const assignCourier = (orderId: string, courierName: "Steadfast" | "Pathao" | "RedX") => {
-    const trackingCode = `${courierName.substring(0, 4).toUpperCase()}-${Math.floor(1000000 + Math.random() * 9000000)}`;
-    setOrders(prev =>
-      prev.map(ord =>
-        ord.id === orderId
-          ? {
-              ...ord,
-              courierName,
-              courierTrackingCode: trackingCode,
-              orderStatus: "In Courier"
-            }
-          : ord
-      )
-    );
-  };
-
-  // Product Admin Functions
-  const addProduct = (newProduct: Omit<Product, "id">) => {
-    const product: Product = {
-      ...newProduct,
-      id: `p_${Date.now()}`
-    };
-    setProducts(prev => [product, ...prev]);
-  };
-
-  const updateProduct = (id: string, updated: Partial<Product>) => {
-    setProducts(prev => prev.map(p => (p.id === id ? { ...p, ...updated } : p)));
-  };
-
-  const deleteProduct = (id: string) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
+    return order;
   };
 
   return (
     <StoreContext.Provider
       value={{
         products,
-        addProduct,
-        updateProduct,
-        deleteProduct,
+        productsLoading,
+        productsError,
+        reloadProducts: () => setProductsReloadKey((k) => k + 1),
         cart,
         addToCart,
         removeFromCart,
@@ -286,18 +235,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         wishlist,
         toggleWishlist,
         isInWishlist,
-        orders,
-        createOrder,
-        updateOrderStatus,
-        assignCourier,
+        placeOrder,
         quickViewProduct,
         setQuickViewProduct,
         isCartOpen,
         setIsCartOpen,
         isCheckoutOpen,
         setIsCheckoutOpen,
-        isBKashOpen,
-        setIsBKashOpen,
         isOrderSuccessOpen,
         setIsOrderSuccessOpen,
         lastCompletedOrder,

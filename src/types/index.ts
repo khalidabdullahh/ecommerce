@@ -28,7 +28,7 @@ export interface CartItem {
   quantity: number;
 }
 
-export type PaymentMethod = "cod" | "bkash" | "card";
+export type PaymentMethod = "cod" | "bkash";
 
 export type OrderStatus = "Pending" | "Confirmed" | "In Courier" | "Delivered" | "Cancelled";
 
@@ -50,6 +50,8 @@ export interface Order {
   orderStatus: OrderStatus;
   courierName?: "Steadfast" | "Pathao" | "RedX";
   courierTrackingCode?: string;
+  bkashTrxId?: string;
+  bkashSender?: string;
   createdAt: string;
 }
 
@@ -58,4 +60,24 @@ export interface Coupon {
   discountType: "percentage" | "fixed" | "free_shipping";
   discountValue: number;
   minSpend?: number;
+}
+
+export interface NewOrderInput {
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  deliveryArea: "inside_dhaka" | "outside_dhaka";
+  paymentMethod: PaymentMethod;
+  bkashTrxId?: string;
+  bkashSender?: string;
+  couponCode?: string;
+  items: { productId: string; size: string; color: string; quantity: number }[];
+}
+
+export interface Quote {
+  subtotal: number;
+  deliveryFee: number;
+  discount: number;
+  couponCode: string | null;
+  grandTotal: number;
 }

@@ -8,7 +8,6 @@ import { ProductCard } from "@/components/ProductCard";
 import { ProductDetailModal } from "@/components/ProductDetailModal";
 import { CartDrawer } from "@/components/CartDrawer";
 import { CheckoutModal } from "@/components/CheckoutModal";
-import { BKashPaymentModal } from "@/components/BKashPaymentModal";
 import { OrderSuccessModal } from "@/components/OrderSuccessModal";
 import { ImageSearchModal } from "@/components/ImageSearchModal";
 import { FloatingChat } from "@/components/FloatingChat";
@@ -18,6 +17,9 @@ import { ArrowRight } from "lucide-react";
 export default function HomePage() {
   const {
     products,
+    productsLoading,
+    productsError,
+    reloadProducts,
     searchQuery,
     setSearchQuery,
     selectedCategory,
@@ -168,7 +170,19 @@ export default function HomePage() {
             </span>
           </div>
 
-          {filteredProducts.length === 0 ? (
+          {productsLoading && products.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 text-center border border-gray-100 text-sm text-gray-400">
+              প্রোডাক্ট লোড হচ্ছে...
+            </div>
+          ) : productsError ? (
+            <div className="bg-white rounded-3xl p-10 text-center border border-gray-100">
+              <p className="text-sm font-bold text-gray-700 mb-2">প্রোডাক্ট লোড করা যায়নি</p>
+              <p className="text-xs text-gray-400 mb-4">{productsError}</p>
+              <button onClick={reloadProducts} className="bg-orange-600 text-white text-xs font-bold py-2 px-5 rounded-full">
+                আবার চেষ্টা করুন
+              </button>
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="bg-white rounded-3xl p-10 text-center border border-gray-100 shadow-2xs">
               <p className="text-sm font-bold text-gray-700 mb-2">কোনো পণ্য পাওয়া যায়নি</p>
               <p className="text-xs text-gray-400 mb-4">অন্য কোনো কিওয়ার্ড বা ক্যাটাগরি দিয়ে চেষ্টা করুন</p>
@@ -202,7 +216,6 @@ export default function HomePage() {
       <ProductDetailModal />
       <CartDrawer />
       <CheckoutModal />
-      <BKashPaymentModal />
       <OrderSuccessModal />
       <ImageSearchModal />
     </div>

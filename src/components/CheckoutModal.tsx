@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { X, CreditCard, Banknote, ShieldCheck, Tag, CheckCircle2, AlertCircle } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { PaymentMethod } from "@/types";
-import { initialCoupons } from "@/data/initialProducts";
+import { PaymentMethod, Quote } from "@/types";
+import { api } from "@/lib/api";
+import { BKASH_NUMBER } from "@/lib/config";
 import confetti from "canvas-confetti";
 
 export const CheckoutModal: React.FC = () => {
@@ -13,8 +14,7 @@ export const CheckoutModal: React.FC = () => {
     isCheckoutOpen,
     setIsCheckoutOpen,
     cartTotal,
-    createOrder,
-    setIsBKashOpen
+    placeOrder
   } = useStore();
 
   const [paymentOption, setPaymentOption] = useState<PaymentMethod>("cod");
@@ -23,41 +23,69 @@ export const CheckoutModal: React.FC = () => {
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryArea, setDeliveryArea] = useState<"inside_dhaka" | "outside_dhaka">("inside_dhaka");
 
-  // Coupon state
+  // bKash manual payment (customer sends money, then enters the TrxID; admin verifies)
+  const [bkashTrxId, setBkashTrxId] = useState("");
+  const [bkashSender, setBkashSender] = useState("");
+
+  // Coupon + server-verified totals
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [appliedCode, setAppliedCode] = useState<string | null>(null);
+  const [quote, setQuote] = useState<Quote | null>(null);
   const [couponError, setCouponError] = useState("");
   const [showCouponInput, setShowCouponInput] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
+  const localFee = deliveryArea === "inside_dhaka" ? 70 : 130;
+  const cartKey = cart.map((i) => `${i.productId}|${i.size}|${i.color}|${i.quantity}`).join(",");
+
+  // Re-price on the server whenever the cart, zone or coupon changes (the server is the source of truth).
+  useEffect(() => {
+    if (!isCheckoutOpen || cart.length === 0) return;
+    let cancelled = false;
+    api<{ quote: Quote }>("/api/quote", {
+      body: {
+        items: cart.map((i) => ({ productId: i.productId, size: i.size, color: i.color, quantity: i.quantity })),
+        deliveryArea,
+        couponCode: appliedCode || undefined
+      }
+    })
+      .then((r) => {
+        if (!cancelled) {
+          setQuote(r.quote);
+          setCouponError("");
+        }
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setQuote(null);
+        if (appliedCode) {
+          setAppliedCode(null);
+          setCouponError(e instanceof Error ? e.message : "কুপন প্রয়োগ করা যায়নি");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCheckoutOpen, cartKey, deliveryArea, appliedCode]);
+
   if (!isCheckoutOpen) return null;
 
-  const deliveryFee = deliveryArea === "inside_dhaka" ? 70 : 130;
-  const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
-  const grandTotal = Math.max(0, cartTotal + deliveryFee - discountAmount);
+  const deliveryFee = quote?.deliveryFee ?? localFee;
+  const discountAmount = quote?.discount ?? 0;
+  const grandTotal = quote?.grandTotal ?? Math.max(0, cartTotal + localFee);
+  const appliedCoupon = appliedCode && quote?.couponCode ? { code: quote.couponCode, discount: quote.discount } : null;
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
     setCouponError("");
-    const cleanCode = couponCode.trim().toUpperCase();
-
-    if (!cleanCode) return;
-
-    if (initialCoupons[cleanCode]) {
-      let discount = 0;
-      if (cleanCode === "EASY10") {
-        discount = Math.round(cartTotal * 0.1);
-      } else if (cleanCode === "WELCOME50") {
-        discount = 50;
-      } else if (cleanCode === "FREEDEL") {
-        discount = deliveryFee;
-      }
-      setAppliedCoupon({ code: cleanCode, discount });
-      setCouponCode("");
-    } else {
-      setCouponError("অবৈধ কুপন কোড! ট্রাই করুন: EASY10 বা WELCOME50");
-    }
+    const clean = couponCode.trim().toUpperCase();
+    if (!clean) return;
+    setAppliedCode(clean);
+    setCouponCode("");
   };
 
   const validateForm = () => {
@@ -71,55 +99,49 @@ export const CheckoutModal: React.FC = () => {
     if (!deliveryAddress.trim() || deliveryAddress.trim().length < 8) {
       errors.address = "সম্পূর্ণ ডেলিভারি ঠিকানা প্রদান করুন (বাসা/রোড/থানা)";
     }
+    if (paymentOption === "bkash") {
+      if (!/^[A-Za-z0-9]{6,14}$/.test(bkashTrxId.trim())) errors.trx = "বিকাশ থেকে পাওয়া TrxID দিন (যেমন: 9AB12CD34E)";
+      if (bkashSender.replace(/\D/g, "").length < 11) errors.sender = "যে নম্বর থেকে টাকা পাঠিয়েছেন সেটি দিন";
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
+    if (submitting) return;
     if (cart.length === 0) {
       alert("আপনার কার্টে কোনো প্রোডাক্ট নেই!");
       return;
     }
-
     if (!validateForm()) return;
 
-    const orderPayload = {
-      customerName,
-      customerPhone,
-      deliveryAddress,
-      deliveryArea,
-      deliveryFee,
-      items: [...cart],
-      subtotal: cartTotal,
-      discount: discountAmount,
-      couponCode: appliedCoupon?.code,
-      grandTotal,
-      paymentMethod: paymentOption,
-      paymentStatus: paymentOption === "cod" ? ("Pending" as const) : ("Paid" as const),
-      orderStatus: "Pending" as const
-    };
-
-    if (paymentOption === "bkash") {
-      // Store in window for simulated bkash completion
-      (window as any).__pendingOrderPayload = orderPayload;
-      setIsCheckoutOpen(false);
-      setIsBKashOpen(true);
-      return;
-    }
-
-    // Direct COD Order
-    createOrder(orderPayload);
-    setIsCheckoutOpen(false);
-
-    // Fire celebratory confetti!
+    setSubmitting(true);
+    setSubmitError("");
     try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 }
+      await placeOrder({
+        customerName,
+        customerPhone,
+        deliveryAddress,
+        deliveryArea,
+        paymentMethod: paymentOption,
+        bkashTrxId: paymentOption === "bkash" ? bkashTrxId.trim() : undefined,
+        bkashSender: paymentOption === "bkash" ? bkashSender : undefined,
+        couponCode: appliedCode || undefined,
+        items: cart.map((i) => ({ productId: i.productId, size: i.size, color: i.color, quantity: i.quantity }))
       });
-    } catch {
-      // Ignore if unavailable
+      setIsCheckoutOpen(false);
+      setAppliedCode(null);
+      setBkashTrxId("");
+      setBkashSender("");
+      try {
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+      } catch {
+        // Ignore if unavailable
+      }
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "অর্ডার করা যায়নি, আবার চেষ্টা করুন");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -198,13 +220,42 @@ export const CheckoutModal: React.FC = () => {
                     <span className="text-[10px] font-black bg-pink-600 text-white px-1.5 py-0.5 rounded">
                       bKash
                     </span>
-                    <span className="text-xs sm:text-sm font-bold text-gray-800">Pay total amount (Online MFS)</span>
+                    <span className="text-xs sm:text-sm font-bold text-gray-800">bKash (Send Money)</span>
                   </div>
                 </div>
                 <span className="text-xs sm:text-sm font-black text-gray-900">
                   ৳{grandTotal.toLocaleString("en-BD")}
                 </span>
               </label>
+
+              {paymentOption === "bkash" && (
+                <div className="p-3.5 rounded-xl border border-pink-200 bg-pink-50/60 space-y-2.5">
+                  <p className="text-[11px] text-gray-700 leading-relaxed">
+                    বিকাশ অ্যাপ থেকে <strong>Send Money</strong> করুন এই নম্বরে:{" "}
+                    <strong className="font-mono text-pink-700 text-xs">{BKASH_NUMBER}</strong>, পরিমাণ{" "}
+                    <strong>৳{grandTotal.toLocaleString("en-BD")}</strong>। এরপর নিচে TrxID দিন। আমরা পেমেন্ট যাচাই করে অর্ডার কনফার্ম করবো।
+                  </p>
+                  <div>
+                    <input
+                      value={bkashTrxId}
+                      onChange={(e) => setBkashTrxId(e.target.value)}
+                      placeholder="বিকাশ TrxID (যেমন: 9AB12CD34E)"
+                      className={`w-full text-xs p-2.5 rounded-xl border bg-white focus:outline-none ${formErrors.trx ? "border-red-500" : "border-pink-200 focus:border-pink-500"}`}
+                    />
+                    {formErrors.trx && <p className="text-[10px] text-red-500 mt-1">{formErrors.trx}</p>}
+                  </div>
+                  <div>
+                    <input
+                      value={bkashSender}
+                      onChange={(e) => setBkashSender(e.target.value)}
+                      inputMode="numeric"
+                      placeholder="যে বিকাশ নম্বর থেকে পাঠিয়েছেন"
+                      className={`w-full text-xs p-2.5 rounded-xl border bg-white focus:outline-none ${formErrors.sender ? "border-red-500" : "border-pink-200 focus:border-pink-500"}`}
+                    />
+                    {formErrors.sender && <p className="text-[10px] text-red-500 mt-1">{formErrors.sender}</p>}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -412,15 +463,17 @@ export const CheckoutModal: React.FC = () => {
           <button
             type="button"
             onClick={handleConfirmOrder}
-            className="w-full bg-gradient-to-r from-orange-600 via-red-600 to-rose-600 hover:from-orange-700 hover:to-red-700 text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl shadow-xl shadow-orange-500/20 active:scale-98 transition-all flex items-center justify-center gap-2"
+            disabled={submitting}
+            className="disabled:opacity-60 w-full bg-gradient-to-r from-orange-600 via-red-600 to-rose-600 hover:from-orange-700 hover:to-red-700 text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl shadow-xl shadow-orange-500/20 active:scale-98 transition-all flex items-center justify-center gap-2"
           >
             <ShieldCheck className="w-5 h-5" />
             <span>
               {paymentOption === "cod"
-                ? "অর্ডার কনফার্ম করুন (ক্যাশ অন ডেলিভারি)"
-                : "বিকাশে পেমেন্ট করে অর্ডার কনফার্ম করুন"}
+                ? submitting ? "অর্ডার হচ্ছে..." : "অর্ডার কনফার্ম করুন (ক্যাশ অন ডেলিভারি)"
+                : submitting ? "অর্ডার হচ্ছে..." : "বিকাশ পেমেন্ট দিয়ে অর্ডার কনফার্ম করুন"}
             </span>
           </button>
+          {submitError && <p className="text-xs text-red-600 text-center font-semibold mb-2">{submitError}</p>}
           <p className="text-[10px] text-center text-gray-400 mt-2">
             🔒 ১০০% নিরাপদ চেকআউট • অর্ডার প্লেস করার পর আমাদের প্রতিনিধি কল করবেন
           </p>
